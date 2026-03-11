@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Website Code Generator - Text & Voice</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.95); border-radius: 20px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #4a5568; margin-bottom: 10px; }
+        .input-section { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+        textarea, input { flex: 1; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; min-height: 120px; resize: vertical; }
+        button { padding: 15px 30px; background: #4299e1; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; transition: background 0.3s; margin: 10px 5px; }
+        button:hover { background: #3182ce; }
+        button:disabled { background: #a0aec0; cursor: not-allowed; }
+        #voiceBtn.recording { background: #e53e3e; }
+        #output { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; min-height: 200px; font-family: monospace; white-space: pre-wrap; overflow-x: auto; }
+        .status { text-align: center; margin: 10px 0; font-weight: bold; }
+        @media (max-width: 768px) { .input-section { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Website Code Generator</h1>
+        <p style="text-align: center; color: #718096;">Describe your website (e.g., "a responsive homepage with navbar, hero section, and contact form") via text or voice!</p>
+        
+        <div class="input-section">
+            <textarea id="textInput" placeholder="Type your website description here..."></textarea>
+            <div>
+                <button id="voiceBtn">🎤 Start Voice</button>
+                <div id="status" class="status"></div>
+            </div>
+        </div>
+        
+        <button id="generateBtn">Generate Code</button>
+        <button id="copyBtn" style="background: #48bb78;">Copy Code</button>
+        
+        <h3 style="margin: 20px 0 10px;">Generated Code:</h3>
+        <div id="output">Generated HTML/CSS/JS code will appear here...</div>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('textInput');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+
+        let recognition;
+        let isRecording = false;
+
+        // Initialize Speech Recognition [web:43][web:44]
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-IN'; // Indian English for better accuracy
+
+            recognition.onstart = () => {
+                status.textContent = 'Listening... Speak now!';
+                voiceBtn.textContent = '🛑 Stop Voice';
+                voiceBtn.classList.add('recording');
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let result of event.results) {
+                    transcript += result[0].transcript;
+                }
+                textInput.value = transcript;
+                status.textContent = 'Voice transcribed!';
+            };
+
+            recognition.onend = () => {
+                if (isRecording) recognition.start();
+            };
+
+            voiceBtn.onclick = () => {
+                isRecording = !isRecording;
+                if (isRecording) {
+                    recognition.start();
+                } else {
+                    recognition.stop();
+                    voiceBtn.textContent = '🎤 Start Voice';
+                    voiceBtn.classList.remove('recording');
+                    status.textContent = '';
+                }
+            };
+        } else {
+            voiceBtn.disabled = true;
+            voiceBtn.textContent = 'Voice not supported';
+        }
+
+        // Simple AI-like code generation based on text prompts [web:49][web:52]
+        // Maps common descriptions to code templates (expandable)
+        const templates = {
+            'homepage': `<!DOCTYPE html>
+<html><head><title>My Homepage</title>
+<style>body { font-family: Arial; } .hero { background: #4299e1; color: white; text-align: center; padding: 50px; }</style></head>
+<body><div class="hero"><h1>Welcome</h1><p>Your content here.</p></div></body></html>`,
+            'navbar': `<nav style="background: #2d3748; padding: 1rem;"><a href="#" style="color: white; margin: 0 1rem;">Home</a><a href="#" style="color: white;">About</a></nav>`,
+            'contact form': `<form style="max-width: 400px; margin: 20px auto;"><input type="text" placeholder="Name" style="width: 100%; padding: 10px; margin: 10px 0;"><textarea placeholder="Message"></textarea><button type="submit">Send</button></form>`,
+            'responsive': `Add to head: <meta name="viewport" content="width=device-width, initial-scale=1.0"> and use flex/grid CSS.`,
+            default: `<!DOCTYPE html><html><head><title>Generated Site</title><style>body { margin: 0; font-family: sans-serif; } header { background: linear-gradient(90deg, #667eea, #764ba2); color: white; padding: 2rem; text-align: center; }</style></head><body><header><h1>Your Website</h1></header><main style="padding: 2rem;">Content generated from: "${prompt}"</main></body></html>`
+        };
+
+        generateBtn.onclick = () => {
+            const prompt = textInput.value.toLowerCase().trim();
+            if (!prompt) return status.textContent = 'Enter a description!';
+
+            let code = templates.default.replace('${prompt}', prompt);
+            
+            // Match keywords for templates
+            if (prompt.includes('home') || prompt.includes('landing')) code = templates.homepage;
+            if (prompt.includes('nav') || prompt.includes('menu')) code += '
+' + templates.navbar;
+            if (prompt.includes('contact') || prompt.includes('form')) code += '
+' + templates['contact form'];
+            if (prompt.includes('responsive')) code += '
+<!-- ' + templates.responsive + ' -->';
+
+            output.textContent = code;
+            status.textContent = 'Code generated!';
+        };
+
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(output.textContent).then(() => {
+                status.textContent = 'Code copied!';
+                setTimeout(() => status.textContent = '', 2000);
+            });
+        };
+    </script>
+</body>
+</html>
